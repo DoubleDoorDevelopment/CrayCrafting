@@ -31,10 +31,12 @@
 package net.doubledoordev.craycrafting.recipes;
 
 import net.doubledoordev.craycrafting.util.Helper;
+import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.World;
 
 import java.lang.reflect.Field;
 
@@ -71,14 +73,15 @@ public class ShapedRecipesType extends BaseType<ShapedRecipes>
             else NBTInput.appendTag(is.writeToNBT(new NBTTagCompound()));
         }
         nbtRecipe.setTag(NBT_input, NBTInput);
-        nbtRecipe.setTag(NBT_output, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_newOutput, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_oldOutput, recipe.getRecipeOutput().writeToNBT(new NBTTagCompound()));
         nbtRecipe.setBoolean(NBT_field_92101_f, ShapedRecipes_field_92101_f.getBoolean(recipe));
 
         return nbtRecipe;
     }
 
     @Override
-    public ShapedRecipes getRecipeFromNBT(NBTTagCompound nbtRecipe)
+    public ShapedRecipes[] getRecipesFromNBT(NBTTagCompound nbtRecipe)
     {
         int width = nbtRecipe.getInteger(NBT_recipeWidth);
         int height = nbtRecipe.getInteger(NBT_recipeHeight);
@@ -87,13 +90,33 @@ public class ShapedRecipesType extends BaseType<ShapedRecipes>
         ItemStack[] input = new ItemStack[list.tagCount()];
         for (int i = 0; i < list.tagCount(); i++) input[i] = ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(i));
 
-        ItemStack output = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_output));
+        ItemStack newOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_newOutput));
+        ItemStack oldOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_oldOutput));
 
-        ShapedRecipes recipes = new ShapedRecipes(width, height, input, output);
+        DimBasedShapedRecipes newRecipes = new DimBasedShapedRecipes(true, width, height, input, newOutput);
+        if (nbtRecipe.getBoolean(NBT_field_92101_f)) newRecipes.func_92100_c();
 
-        if (nbtRecipe.getBoolean(NBT_field_92101_f)) recipes.func_92100_c();
+        DimBasedShapedRecipes oldRecipes = new DimBasedShapedRecipes(false, width, height, input, oldOutput);
+        if (nbtRecipe.getBoolean(NBT_field_92101_f)) oldRecipes.func_92100_c();
 
-        return recipes;
+        return new ShapedRecipes[] {newRecipes, oldRecipes};
+    }
+
+    public static class DimBasedShapedRecipes extends ShapedRecipes
+    {
+        boolean isCrayRecipe;
+
+        public DimBasedShapedRecipes(boolean isCrayRecipe, int p_i1917_1_, int p_i1917_2_, ItemStack[] p_i1917_3_, ItemStack p_i1917_4_)
+        {
+            super(p_i1917_1_, p_i1917_2_, p_i1917_3_, p_i1917_4_);
+            this.isCrayRecipe = isCrayRecipe;
+        }
+
+        @Override
+        public boolean matches(InventoryCrafting inv, World world)
+        {
+            return ((RecipeRegistry.doesCrayApplyTo(world) && isCrayRecipe) || (!RecipeRegistry.doesCrayApplyTo(world) && !isCrayRecipe)) && super.matches(inv, world);
+        }
     }
 
     @Override

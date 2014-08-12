@@ -28,28 +28,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.doubledoordev.craycrafting.util;
+package net.doubledoordev.craycrafting.network;
+
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
+import io.netty.buffer.ByteBuf;
+import net.doubledoordev.craycrafting.recipes.RecipeRegistry;
 
 /**
- * Constants!
+ * This is a copy paste class :p
  *
  * @author Dries007
  */
-public class Constants
+public class ConfigSyncMessage implements IMessage
 {
-    private Constants() {}
+    boolean listType;
+    Integer[] list;
 
-    public static final String MODID = "CrayCrafting";
+    public ConfigSyncMessage(boolean listType, Integer[] list)
+    {
+        this.listType = listType;
+        this.list = list;
+    }
 
-    public static final String DUMMY_CHARS = "azertyuiopqsdfghjklmwxcvbn"; // Dummy caracters for the map in ShapedOreRecipeType
+    public ConfigSyncMessage()
+    {
+    }
 
-    public static final String NBT_recipeWidth   = "recipeWidth";
-    public static final String NBT_recipeHeight  = "recipeHeight";
-    public static final String NBT_input         = "input";
-    public static final String NBT_newOutput     = "output";
-    public static final String NBT_oldOutput     = "oldOutput";
-    public static final String NBT_field_92101_f = "field_92101_f";
-    public static final String NBT_map           = "map";
-    public static final String NBT_mirror        = "mirror";
-    public static final String NBT_oredictname   = "oredictname";
+    @Override
+    public void fromBytes(ByteBuf buf)
+    {
+        listType = buf.readBoolean();
+        list = new Integer[buf.readInt()];
+        for (int i = 0; i < list.length; i++) list[i] = buf.readInt();
+    }
+
+    @Override
+    public void toBytes(ByteBuf buf)
+    {
+        buf.writeBoolean(listType);
+        buf.writeInt(list.length);
+        for (int i : list) buf.writeInt(i);
+    }
+
+    public static class Handler implements IMessageHandler<ConfigSyncMessage, IMessage>
+    {
+        @Override
+        public IMessage onMessage(ConfigSyncMessage message, MessageContext ctx)
+        {
+            if (ctx.side.isClient()) RecipeRegistry.setConfigFromServer(message.listType, message.list);
+            return null;
+        }
+    }
 }

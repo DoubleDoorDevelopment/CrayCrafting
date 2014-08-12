@@ -38,6 +38,7 @@ import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -52,8 +53,8 @@ public abstract class BaseType<T extends IRecipe>
 {
     final Class<T> type;
 
-    final protected LinkedList<T> addedList   = new LinkedList<T>();
-    final protected LinkedList<T> removedList = new LinkedList<T>();
+    final protected LinkedList<T> addedList   = new LinkedList<>();
+    final protected LinkedList<T> removedList = new LinkedList<>();
     private         NBTTagList    nbtList     = new NBTTagList();
 
     boolean applied;
@@ -79,7 +80,7 @@ public abstract class BaseType<T extends IRecipe>
      * Don't forget to set special properties if required.
      * Used on both sides.
      */
-    public abstract T getRecipeFromNBT(NBTTagCompound nbtRecipe);
+    public abstract T[] getRecipesFromNBT(NBTTagCompound nbtRecipe);
 
     /**
      * Check everything EXCEPT the output ItemStack.
@@ -114,17 +115,17 @@ public abstract class BaseType<T extends IRecipe>
     @SuppressWarnings("unchecked")
     public void loadRecipesFromNBT(NBTTagCompound root) throws Exception
     {
-        NBTTagList list = root.getTagList(getTypeName(), 10);
-        for (int i = 0; i < list.tagCount(); i++)
+        nbtList = root.getTagList(getTypeName(), 10);
+        for (int i = 0; i < nbtList.tagCount(); i++)
         {
-            T newRecipe = getRecipeFromNBT(list.getCompoundTagAt(i));
-            addedList.add(newRecipe);
+            T[] newRecipes = getRecipesFromNBT(nbtList.getCompoundTagAt(i));
+            Collections.addAll(addedList, newRecipes);
 
             for (IRecipe oldRecipe : (List<IRecipe>) CraftingManager.getInstance().getRecipeList())
             {
                 if (type.isAssignableFrom(oldRecipe.getClass())) // instanceof basically
                 {
-                    if (equalsExceptOutput(newRecipe, (T) oldRecipe))
+                    if (equalsExceptOutput(newRecipes[0], (T) oldRecipe))
                     {
                         removedList.add((T) oldRecipe);
                         break;
@@ -186,7 +187,7 @@ public abstract class BaseType<T extends IRecipe>
             removedList.add(recipe);
             NBTTagCompound nbtRecipe = getNBTFromRecipe(recipe, itemStack);
             nbtList.appendTag(nbtRecipe);
-            addedList.add(getRecipeFromNBT(nbtRecipe));
+            Collections.addAll(addedList, getRecipesFromNBT(nbtRecipe));
         }
         catch (Exception e)
         {

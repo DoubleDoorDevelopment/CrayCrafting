@@ -31,15 +31,16 @@
 package net.doubledoordev.craycrafting.recipes;
 
 import net.doubledoordev.craycrafting.util.Helper;
+import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.ShapelessRecipes;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.World;
 
 import java.util.ArrayList;
 
-import static net.doubledoordev.craycrafting.util.Constants.NBT_input;
-import static net.doubledoordev.craycrafting.util.Constants.NBT_output;
+import static net.doubledoordev.craycrafting.util.Constants.*;
 
 /**
  * @author Dries007
@@ -62,21 +63,40 @@ public class ShapelessRecipesType extends BaseType<ShapelessRecipes>
             else NBTInput.appendTag(((ItemStack) is).writeToNBT(new NBTTagCompound()));
         }
         nbtRecipe.setTag(NBT_input, NBTInput);
-        nbtRecipe.setTag(NBT_output, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_newOutput, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_oldOutput, recipe.getRecipeOutput().writeToNBT(new NBTTagCompound()));
 
         return nbtRecipe;
     }
 
     @Override
-    public ShapelessRecipes getRecipeFromNBT(NBTTagCompound nbtRecipe)
+    public ShapelessRecipes[] getRecipesFromNBT(NBTTagCompound nbtRecipe)
     {
-        ItemStack output = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_output));
+        ItemStack newOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_newOutput));
+        ItemStack oldOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_oldOutput));
         NBTTagList list = nbtRecipe.getTagList(NBT_input, 10);
 
         ArrayList<ItemStack> input = new ArrayList<>();
         for (int i = 0; i < list.tagCount(); i++) input.add(ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(i)));
 
-        return new ShapelessRecipes(output, input);
+        return new ShapelessRecipes[] {new DimBasedShapelessRecipes(true, newOutput, input), new DimBasedShapelessRecipes(false, oldOutput, input)};
+    }
+
+    public static class DimBasedShapelessRecipes extends ShapelessRecipes
+    {
+        boolean isCrayRecipe;
+
+        public DimBasedShapelessRecipes(boolean isCrayRecipe, ItemStack newOutput, ArrayList<ItemStack> input)
+        {
+            super(newOutput, input);
+            this.isCrayRecipe = isCrayRecipe;
+        }
+
+        @Override
+        public boolean matches(InventoryCrafting inv, World world)
+        {
+            return ((RecipeRegistry.doesCrayApplyTo(world) && isCrayRecipe) || (!RecipeRegistry.doesCrayApplyTo(world) && !isCrayRecipe)) && super.matches(inv, world);
+        }
     }
 
     @Override

@@ -48,6 +48,8 @@ public class Config
     public boolean debug = false;
     public int     timer = 0;
     public String  timermessage = "[CrayCrafting] Recipes have been rotated!";
+    public boolean listType = false;
+    public Integer[] list = new Integer[0];
 
     public Config(File file)
     {
@@ -59,6 +61,11 @@ public class Config
 
         timer = configuration.get(MODID, "resetTimer", timer, "For extra evil, this timer rotates the crafting every X minutes. 0 for disable.").getInt();
         timermessage = configuration.get(MODID, "timermessage", timermessage, "Message to be send to all players on timer. Empty = no message").getString();
+
+        listType = configuration.getBoolean("listType", MODID, listType, "True means that the list is a whitelist. Craycrafting only applies in the dimensions in the list.\nFalse means that the list is a blacklist. Craycrafting applies in all dimensions except the ones in the list");
+        int[] templist = configuration.get(MODID, "list", new int[0], "The black/whitelist. See listType.").getIntList();
+        list = new Integer[templist.length];
+        for (int i = 0; i < templist.length; i++) list[i] = templist[i];
 
         save();
     }

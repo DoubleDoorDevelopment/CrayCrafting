@@ -30,8 +30,10 @@
 
 package net.doubledoordev.craycrafting.recipes;
 
+import com.google.common.collect.Sets;
 import cpw.mods.fml.common.FMLCommonHandler;
 import net.doubledoordev.craycrafting.CrayCrafting;
+import net.doubledoordev.craycrafting.network.ConfigSyncMessage;
 import net.doubledoordev.craycrafting.network.RecipeMessage;
 import net.doubledoordev.craycrafting.network.ResetMessage;
 import net.minecraft.entity.player.EntityPlayer;
@@ -41,12 +43,12 @@ import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.World;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Replaces a lot of the old helper crap
@@ -55,7 +57,13 @@ import java.util.List;
  */
 public class RecipeRegistry
 {
-    private static final ArrayList<BaseType<IRecipe>> typeList = new ArrayList<BaseType<IRecipe>>();
+    private static final ArrayList<BaseType<IRecipe>> typeList = new ArrayList<>();
+    /**
+     * True means that the list is a whitelist. Craycrafting only applies in the dimensions in the list.
+     * False means that the list is a blacklist. Craycrafting applies in all dimensions except the ones in the list
+     */
+    public static boolean      listType;
+    public static Set<Integer> list;
 
     /**
      * Used to read from disk and from the packet send to the server.
@@ -88,14 +96,29 @@ public class RecipeRegistry
         typeList.add(baseType);
     }
 
+    public static void setConfigFromServer(boolean listTypeP, Integer[] listP)
+    {
+        listType = listTypeP;
+        list = Sets.newHashSet(listP);
+    }
+
+    public static boolean doesCrayApplyTo(World world)
+    {
+        if (FMLCommonHandler.instance().getEffectiveSide().isClient()) System.out.println(world.provider.dimensionId);
+        if (listType) return list.contains(world.provider.dimensionId);
+        else return !list.contains(world.provider.dimensionId);
+    }
+
     public static void sendPacketTo(EntityPlayer player)
     {
         CrayCrafting.getSnw().sendTo(new ResetMessage(), (EntityPlayerMP) player);
+        CrayCrafting.getSnw().sendTo(new ConfigSyncMessage(CrayCrafting.getConfig().listType, CrayCrafting.getConfig().list), (EntityPlayerMP) player);
         for (BaseType<IRecipe> baseType : typeList)
         {
             NBTTagCompound nbtTagCompound = new NBTTagCompound();
+            NBTTagList nbtTagList = baseType.getNBTList();
             nbtTagCompound.setTag(baseType.getTypeName(), baseType.getNBTList());
-            CrayCrafting.instance.logger.info("Sending " + baseType.getTypeName());
+            CrayCrafting.instance.logger.info("Sending " + baseType.getTypeName() + " " + nbtTagList.tagCount());
             CrayCrafting.getSnw().sendTo(new RecipeMessage(nbtTagCompound), (EntityPlayerMP) player);
         }
     }
@@ -103,11 +126,13 @@ public class RecipeRegistry
     public static void sendPacketToAll()
     {
         CrayCrafting.getSnw().sendToAll(new ResetMessage());
+        CrayCrafting.getSnw().sendToAll(new ConfigSyncMessage(CrayCrafting.getConfig().listType, CrayCrafting.getConfig().list));
         for (BaseType<IRecipe> baseType : typeList)
         {
             NBTTagCompound nbtTagCompound = new NBTTagCompound();
-            nbtTagCompound.setTag(baseType.getTypeName(), baseType.getNBTList());
-            CrayCrafting.instance.logger.info("Sending " + baseType.getTypeName());
+            NBTTagList nbtTagList = baseType.getNBTList();
+            nbtTagCompound.setTag(baseType.getTypeName(), nbtTagList);
+            CrayCrafting.instance.logger.info("Sending " + baseType.getTypeName() + " " + nbtTagList.tagCount());
             CrayCrafting.getSnw().sendToAll(new RecipeMessage(nbtTagCompound));
         }
     }

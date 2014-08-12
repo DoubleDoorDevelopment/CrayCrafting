@@ -33,11 +33,13 @@ package net.doubledoordev.craycrafting.recipes;
 import com.google.common.collect.HashBiMap;
 import net.doubledoordev.craycrafting.CrayCrafting;
 import net.doubledoordev.craycrafting.util.Helper;
+import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
+import net.minecraft.world.World;
 import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
@@ -154,17 +156,19 @@ public class ShapedOreRecipeType extends BaseType<ShapedOreRecipe>
             }
         }
         nbtRecipe.setTag(NBT_map, nbtMap);
-        nbtRecipe.setTag(NBT_output, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_newOutput, newOutput.writeToNBT(new NBTTagCompound()));
+        nbtRecipe.setTag(NBT_oldOutput, recipe.getRecipeOutput().writeToNBT(new NBTTagCompound()));
         nbtRecipe.setBoolean(NBT_mirror, ShapedOreRecipe_mirror.getBoolean(recipe));
 
         return nbtRecipe;
     }
 
     @Override
-    public ShapedOreRecipe getRecipeFromNBT(NBTTagCompound nbtRecipe)
+    public ShapedOreRecipe[] getRecipesFromNBT(NBTTagCompound nbtRecipe)
     {
         ArrayList<Object> input = new ArrayList<Object>(); // Becomes entire recipe input
-        ItemStack output = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_output));
+        ItemStack newOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_newOutput));
+        ItemStack oldOutput = ItemStack.loadItemStackFromNBT(nbtRecipe.getCompoundTag(NBT_oldOutput));
 
         NBTTagList inputs = nbtRecipe.getTagList(NBT_input, 8);
         for (int i = 0; i < inputs.tagCount(); i++) input.add(inputs.getStringTagAt(i));
@@ -178,7 +182,23 @@ public class ShapedOreRecipeType extends BaseType<ShapedOreRecipe>
             else input.add(ItemStack.loadItemStackFromNBT((NBTTagCompound) entry));
         }
 
-        return new ShapedOreRecipe(output, input.toArray()).setMirrored(nbtRecipe.getBoolean(NBT_mirror));
+        return new ShapedOreRecipe[] { new DimBasedShapedOreRecipe(true, newOutput, input.toArray()).setMirrored(nbtRecipe.getBoolean(NBT_mirror)), new DimBasedShapedOreRecipe(false, oldOutput, input.toArray()).setMirrored(nbtRecipe.getBoolean(NBT_mirror))};
+    }
+
+    public static class DimBasedShapedOreRecipe extends ShapedOreRecipe
+    {
+        boolean isCrayRecipe;
+        public DimBasedShapedOreRecipe(boolean isCrayRecipe, ItemStack newOutput, Object[] objects)
+        {
+            super(newOutput, objects);
+            this.isCrayRecipe = isCrayRecipe;
+        }
+
+        @Override
+        public boolean matches(InventoryCrafting inv, World world)
+        {
+            return ((RecipeRegistry.doesCrayApplyTo(world) && isCrayRecipe) || (!RecipeRegistry.doesCrayApplyTo(world) && !isCrayRecipe)) && super.matches(inv, world);
+        }
     }
 
     @Override

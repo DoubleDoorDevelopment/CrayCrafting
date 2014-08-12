@@ -35,11 +35,13 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
+import net.doubledoordev.craycrafting.network.ConfigSyncMessage;
 import net.doubledoordev.craycrafting.network.RecipeMessage;
 import net.doubledoordev.craycrafting.network.ResetMessage;
 import net.doubledoordev.craycrafting.recipes.*;
@@ -99,11 +101,20 @@ public class CrayCrafting
         snw = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
         snw.registerMessage(RecipeMessage.Handler.class, RecipeMessage.class, id++, Side.CLIENT);
         snw.registerMessage(ResetMessage.Handler.class, ResetMessage.class, id++, Side.CLIENT);
+        snw.registerMessage(ConfigSyncMessage.Handler.class, ConfigSyncMessage.class, id++, Side.CLIENT);
+    }
+
+    @Mod.EventHandler()
+    public void eventHandler(FMLServerStoppingEvent event)
+    {
+        if (!MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.undo();
     }
 
     @Mod.EventHandler()
     public void eventHandler(FMLServerStartingEvent event)
     {
+        RecipeRegistry.setConfigFromServer(config.listType, config.list);
+
         recipeFile = new File(DimensionManager.getCurrentSaveRootDirectory(), MODID + ".dat");
         if (recipeFile.exists())
         {
@@ -136,7 +147,7 @@ public class CrayCrafting
                     logger.warn("Recipe timer! Resetting all the recipes!");
                     RecipeRegistry.undo();
                     RecipeRegistry.randomizeRecipes(recipeFile);
-                    RecipeRegistry.sendPacketToAll();
+                    if (MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.sendPacketToAll();
 
                     if (!Strings.isNullOrEmpty(config.timermessage)) MinecraftServer.getServer().getConfigurationManager().sendChatMsg(new ChatComponentText(config.timermessage));
 
@@ -147,7 +158,7 @@ public class CrayCrafting
     }
 
     @SubscribeEvent
-    public void login(PlayerEvent.PlayerLoggedInEvent event)
+    public void loginEvent(PlayerEvent.PlayerLoggedInEvent event)
     {
         if (MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.sendPacketTo(event.player);
     }
