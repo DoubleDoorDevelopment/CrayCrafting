@@ -30,6 +30,7 @@
 
 package net.doubledoordev.craycrafting;
 
+import com.google.common.base.Strings;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -42,15 +43,17 @@ import cpw.mods.fml.relauncher.Side;
 import net.doubledoordev.craycrafting.network.RecipeMessage;
 import net.doubledoordev.craycrafting.network.ResetMessage;
 import net.doubledoordev.craycrafting.recipes.*;
-import net.doubledoordev.lib.DevPerks;
+import net.doubledoordev.craycrafting.util.Config;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Configuration;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static net.doubledoordev.craycrafting.util.Constants.MODID;
 
@@ -63,13 +66,19 @@ public class CrayCrafting
     @Mod.Instance(MODID)
     public static CrayCrafting instance;
 
-    private boolean                       debug       = false;
     public Logger logger;
     private SimpleNetworkWrapper snw;
+    private Config config;
+    private File recipeFile;
 
     public static SimpleNetworkWrapper getSnw()
     {
         return instance.snw;
+    }
+
+    public static Config getConfig()
+    {
+        return instance.config;
     }
 
     @Mod.EventHandler
@@ -79,11 +88,7 @@ public class CrayCrafting
         MinecraftForge.EVENT_BUS.register(this);
         FMLCommonHandler.instance().bus().register(this);
 
-        Configuration configuration = new Configuration(event.getSuggestedConfigurationFile());
-
-        debug = configuration.getBoolean("debug", MODID, debug, "Enable extra debug output.");
-        if (configuration.getBoolean("sillyness", MODID, true, "Disable sillyness only if you want to piss off the developers XD")) MinecraftForge.EVENT_BUS.register(new DevPerks(debug));
-        if (configuration.hasChanged()) configuration.save();
+        config = new Config(event.getSuggestedConfigurationFile());
 
         new ShapedRecipesType();
         new ShapelessRecipesType();
@@ -99,7 +104,7 @@ public class CrayCrafting
     @Mod.EventHandler()
     public void eventHandler(FMLServerStartingEvent event)
     {
-        File recipeFile = new File(DimensionManager.getCurrentSaveRootDirectory(), MODID + ".dat");
+        recipeFile = new File(DimensionManager.getCurrentSaveRootDirectory(), MODID + ".dat");
         if (recipeFile.exists())
         {
             try
@@ -114,6 +119,30 @@ public class CrayCrafting
         else
         {
             RecipeRegistry.randomizeRecipes(recipeFile);
+        }
+
+        if (config.timer > 0) setupTimer();
+    }
+
+    public void setupTimer()
+    {
+        if (config.timer >= 1)
+        {
+            new Timer(MODID + "-Timer").schedule(new TimerTask()
+            {
+                @Override
+                public void run()
+                {
+                    logger.warn("Recipe timer! Resetting all the recipes!");
+                    RecipeRegistry.undo();
+                    RecipeRegistry.randomizeRecipes(recipeFile);
+                    RecipeRegistry.sendPacketToAll();
+
+                    if (!Strings.isNullOrEmpty(config.timermessage)) MinecraftServer.getServer().getConfigurationManager().sendChatMsg(new ChatComponentText(config.timermessage));
+
+                    setupTimer();
+                }
+            }, 1000 * 60 * config.timer);
         }
     }
 

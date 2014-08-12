@@ -100,6 +100,18 @@ public class RecipeRegistry
         }
     }
 
+    public static void sendPacketToAll()
+    {
+        CrayCrafting.getSnw().sendToAll(new ResetMessage());
+        for (BaseType<IRecipe> baseType : typeList)
+        {
+            NBTTagCompound nbtTagCompound = new NBTTagCompound();
+            nbtTagCompound.setTag(baseType.getTypeName(), baseType.getNBTList());
+            CrayCrafting.instance.logger.info("Sending " + baseType.getTypeName());
+            CrayCrafting.getSnw().sendToAll(new RecipeMessage(nbtTagCompound));
+        }
+    }
+
     /**
      * Used on both sides.
      */
