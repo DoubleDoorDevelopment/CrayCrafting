@@ -104,7 +104,6 @@ public class RecipeRegistry
 
     public static boolean doesCrayApplyTo(World world)
     {
-        if (FMLCommonHandler.instance().getEffectiveSide().isClient()) System.out.println(world.provider.dimensionId);
         if (listType) return list.contains(world.provider.dimensionId);
         else return !list.contains(world.provider.dimensionId);
     }
