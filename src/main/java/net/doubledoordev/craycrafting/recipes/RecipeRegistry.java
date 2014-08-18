@@ -111,7 +111,7 @@ public class RecipeRegistry
     public static void sendPacketTo(EntityPlayer player)
     {
         CrayCrafting.getSnw().sendTo(new ResetMessage(), (EntityPlayerMP) player);
-        CrayCrafting.getSnw().sendTo(new ConfigSyncMessage(CrayCrafting.getConfig().listType, CrayCrafting.getConfig().list), (EntityPlayerMP) player);
+        CrayCrafting.getSnw().sendTo(new ConfigSyncMessage(CrayCrafting.instance.listType, CrayCrafting.instance.list), (EntityPlayerMP) player);
         for (BaseType<IRecipe> baseType : typeList)
         {
             NBTTagCompound nbtTagCompound = new NBTTagCompound();
@@ -125,7 +125,7 @@ public class RecipeRegistry
     public static void sendPacketToAll()
     {
         CrayCrafting.getSnw().sendToAll(new ResetMessage());
-        CrayCrafting.getSnw().sendToAll(new ConfigSyncMessage(CrayCrafting.getConfig().listType, CrayCrafting.getConfig().list));
+        CrayCrafting.getSnw().sendToAll(new ConfigSyncMessage(CrayCrafting.instance.listType, CrayCrafting.instance.list));
         for (BaseType<IRecipe> baseType : typeList)
         {
             NBTTagCompound nbtTagCompound = new NBTTagCompound();

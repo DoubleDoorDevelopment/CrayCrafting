@@ -28,7 +28,7 @@ apply plugin: "maven"
 apply plugin: "idea-utils"
 
 group = "net.doubledoordev.craycrafting"
-version = "1.2.0"
+version = "1.3.0"
 
 targetCompatibility = 1.7
 sourceCompatibility = 1.7
@@ -39,6 +39,17 @@ def description = 'Crafting recipe randomiser.'
 minecraft {
     version = "1.7.10-10.13.0.1190"
     runDir = "jars"
+}
+
+repositories {
+    maven {
+         name "DDD repo"
+         url "http://doubledoordev.net/maven/"
+     }
+}
+
+dependencies {
+    compile "net.doubledoordev.d3core:D3Core:" + project.minecraft.version + "-+:dev"
 }
 
 if (System.getenv().BUILD_NUMBER != null) version += "." + System.getenv().BUILD_NUMBER

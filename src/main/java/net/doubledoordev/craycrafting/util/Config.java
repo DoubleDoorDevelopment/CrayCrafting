@@ -30,8 +30,6 @@
 
 package net.doubledoordev.craycrafting.util;
 
-import net.doubledoordev.lib.DevPerks;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 
 import java.io.File;
@@ -45,7 +43,6 @@ public class Config
 {
     private final File file;
     private       Configuration configuration;
-    public boolean debug = false;
     public int     timer = 0;
     public String  timermessage = "[CrayCrafting] Recipes have been rotated!";
     public boolean listType = false;
@@ -55,9 +52,6 @@ public class Config
     {
         this.file = file;
         configuration = new Configuration(file);
-
-        debug = configuration.getBoolean("debug", MODID, debug, "Enable extra debug output.");
-        if (configuration.getBoolean("sillyness", MODID, true, "Disable sillyness only if you want to piss off the developers XD")) MinecraftForge.EVENT_BUS.register(new DevPerks(debug));
 
         timer = configuration.get(MODID, "resetTimer", timer, "For extra evil, this timer rotates the crafting every X minutes. 0 for disable.").getInt();
         timermessage = configuration.get(MODID, "timermessage", timermessage, "Message to be send to all players on timer. Empty = no message").getString();
