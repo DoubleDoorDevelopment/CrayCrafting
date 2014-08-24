@@ -43,13 +43,19 @@ minecraft {
 
 repositories {
     maven {
-         name "DDD repo"
-         url "http://doubledoordev.net/maven/"
-     }
+        name "DDD repo"
+        url "http://doubledoordev.net/maven/"
+    }
+    maven {
+        name "CB Repo"
+        url "http://chickenbones.net/maven/"
+    }
 }
 
 dependencies {
-    compile "net.doubledoordev.d3core:D3Core:" + project.minecraft.version + "-+:dev"
+    compile group: 'net.doubledoordev.d3core', name: 'D3Core', version: project.minecraft.version + '-+', classifier: 'dev'
+    compile group: 'codechicken', name: 'CodeChickenCore', version: project.minecraft.version + '-+', classifier: 'dev'
+    compile group: 'codechicken', name: 'NotEnoughItems', version: project.minecraft.version + '-+', classifier: 'dev'
 }
 
 if (System.getenv().BUILD_NUMBER != null) version += "." + System.getenv().BUILD_NUMBER
