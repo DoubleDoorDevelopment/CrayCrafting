@@ -37,7 +37,7 @@ archivesBaseName = 'CrayCrafting'
 def githuborg = 'DoubleDoorDevelopment'
 def description = 'Crafting recipe randomiser.'
 minecraft {
-    version = "1.7.10-10.13.0.1190"
+    version = "1.7.10-10.13.2.1240"
     runDir = "jars"
 }
 
@@ -50,12 +50,17 @@ repositories {
         name "CB Repo"
         url "http://chickenbones.net/maven/"
     }
+    maven {
+        name "Forge"
+        url "http://files.minecraftforge.net/maven/"
+    }
 }
 
 dependencies {
     compile group: 'net.doubledoordev.d3core', name: 'D3Core', version: project.minecraft.version + '-+', classifier: 'dev'
-    compile group: 'codechicken', name: 'CodeChickenCore', version: project.minecraft.version + '-+', classifier: 'dev'
-    compile group: 'codechicken', name: 'NotEnoughItems', version: project.minecraft.version + '-+', classifier: 'dev'
+    //compile group: 'codechicken', name: 'CodeChickenCore', version: project.minecraft.version + '-+', classifier: 'dev'
+    //compile group: 'codechicken', name: 'CodeChickenLib', version: project.minecraft.version + '-+', classifier: 'dev'
+    //compile group: 'codechicken', name: 'NotEnoughItems', version: project.minecraft.version + '-+', classifier: 'dev'
 }
 
 if (System.getenv().BUILD_NUMBER != null) version += "." + System.getenv().BUILD_NUMBER
@@ -112,10 +117,10 @@ idea {
 }
 
 uploadArchives {
-    if (project.hasProperty("dddUser") && project.hasProperty("dddPass")) {
+    if (project.hasProperty("dddUser") && project.hasProperty("dddUrl") && project.hasProperty("dddPass")) {
         repositories {
             mavenDeployer {
-                repository(url: "http://doubledoordev.net:8081/artifactory/mods") {
+                repository(url: dddUrl) {
                     authentication(userName: dddUser, password: dddPass)
                 }
                 pom {
