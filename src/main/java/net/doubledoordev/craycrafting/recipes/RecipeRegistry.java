@@ -63,7 +63,7 @@ public class RecipeRegistry
      * False means that the list is a blacklist. Craycrafting applies in all dimensions except the ones in the list
      */
     public static boolean      listType;
-    public static Set<Integer> list;
+    public final static Set<Integer> list = new HashSet<>();
 
     /**
      * Used to read from disk and from the packet send to the server.
@@ -99,7 +99,8 @@ public class RecipeRegistry
     public static void setConfigFromServer(boolean listTypeP, Integer[] listP)
     {
         listType = listTypeP;
-        list = Sets.newHashSet(listP);
+        list.clear();
+        list.addAll(Sets.newHashSet(listP));
     }
 
     public static boolean doesCrayApplyTo(World world)
