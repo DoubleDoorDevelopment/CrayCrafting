@@ -122,7 +122,7 @@ public class ShapelessOreRecipeType extends BaseType<ShapelessOreRecipe>
         @Override
         public boolean matches(InventoryCrafting inv, World world)
         {
-            return ((RecipeRegistry.doesCrayApplyTo(world) && isCrayRecipe) || (!RecipeRegistry.doesCrayApplyTo(world) && !isCrayRecipe)) && super.matches(inv, world);
+            return inv != null && world != null && ((RecipeRegistry.doesCrayApplyTo(world) && isCrayRecipe) || (!RecipeRegistry.doesCrayApplyTo(world) && !isCrayRecipe)) && super.matches(inv, world);
         }
     }
 
