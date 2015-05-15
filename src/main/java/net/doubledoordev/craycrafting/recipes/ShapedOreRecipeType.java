@@ -44,10 +44,7 @@ import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static net.doubledoordev.craycrafting.util.Constants.*;
 
@@ -132,9 +129,29 @@ public class ShapedOreRecipeType extends BaseType<ShapedOreRecipe>
             for (int w = 0; w < width; w++)
             {
                 int i = h * width + w;
-                if (recipe.getInput()[i] == null) chars[h][w] = ' ';
-                else if (recipe.getInput()[i] instanceof ArrayList) chars[h][w] = map.inverse().get(arrayListMap.get(recipe.getInput()[i]));
-                else chars[h][w] = map.inverse().get(recipe.getInput()[i]);
+
+                Object input = recipe.getInput()[i];
+
+                if (input == null)
+                {
+                    chars[h][w] = ' ';
+                }
+                else if (input instanceof ArrayList)
+                {
+                    Object o = arrayListMap.get(input);
+                    if (o != null)
+                    {
+                        chars[h][w] = map.inverse().get(o);
+                    }
+                    else
+                    {
+                        chars[h][w] = ' ';
+                    }
+                }
+                else
+                {
+                    chars[h][w] = map.inverse().get(input);
+                }
             }
             String line = new String(chars[h]);
             NBTInput.appendTag(new NBTTagString(line));
