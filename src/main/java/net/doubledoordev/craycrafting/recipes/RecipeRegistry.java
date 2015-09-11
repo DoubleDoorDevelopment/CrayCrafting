@@ -147,6 +147,11 @@ public class RecipeRegistry
         ArrayList<ItemStack> outputs = new ArrayList<ItemStack>(CraftingManager.getInstance().getRecipeList().size());
         ArrayList<IRecipe> acceptedRecipes = new ArrayList<IRecipe>();
 
+		for (BaseType<IRecipe> baseType : typeList)
+		{
+			baseType.resetNBTList();
+		}
+		
         for (IRecipe recipe : (List<IRecipe>) CraftingManager.getInstance().getRecipeList())
         {
             for (BaseType<IRecipe> baseType : typeList)

@@ -159,7 +159,7 @@ public abstract class BaseType<T extends IRecipe>
     {
         if (applied)
         {
-            CrayCrafting.instance.logger.info("UNDO " + getTypeName() + "\t Removed " + removedList.size() + "\t & added " + addedList.size() + "\t recipes from " + FMLCommonHandler.instance().getEffectiveSide());
+            CrayCrafting.instance.logger.info("UNDO " + getTypeName() + "\t Removed " + addedList.size() + "\t & added " + removedList.size() + "\t recipes from " + FMLCommonHandler.instance().getEffectiveSide());
             applied = false;
             CraftingManager.getInstance().getRecipeList().removeAll(addedList);
             CraftingManager.getInstance().getRecipeList().addAll(removedList);
@@ -176,6 +176,16 @@ public abstract class BaseType<T extends IRecipe>
     {
         return nbtList;
     }
+	
+	/**
+	 * Used to clear existing randomized recipes in nbt file data, before adding the new ones.
+     * <p/>
+	 * Used on server only.
+	 */
+	public void resetNBTList()
+	{
+		nbtList = new NBTTagList();
+	}
 
     /**
      * Used on server only.
