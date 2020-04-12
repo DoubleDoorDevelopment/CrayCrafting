@@ -33,8 +33,8 @@ public final class Config
 
             recipeRandomizationTicks = builder
                 .comment("Number of ticks before recipes are randomized. 24000 = 1 in game day. Set to 0 to disable.")
-                .translation(MOD_ID + ".config.recipe_randomization_ticks") // todo: change default
-                .defineInRange("recipe_randomization_ticks", 1000, 1000, Integer.MAX_VALUE);
+                .translation(MOD_ID + ".config.recipe_randomization_ticks")
+                .defineInRange("recipe_randomization_ticks", 24000, 1000, Integer.MAX_VALUE);
 
             builder.pop();
         }
