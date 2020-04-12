@@ -18,14 +18,14 @@ issueTrackerURL="https://github.com/DoubleDoorDevelopment/CrayCrafting" #optiona
     '''
 
 # dependencies
-[[dependencies.suckeggs]]
+[[dependencies.craycrafting]]
     modId="forge" #mandatory
     mandatory=true #mandatory
     versionRange="[31,)" #mandatory
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.suckeggs]]
+[[dependencies.craycrafting]]
     modId="minecraft" #mandatory
     mandatory=true #mandatory
     versionRange="[1.15.2,)" #mandatory
