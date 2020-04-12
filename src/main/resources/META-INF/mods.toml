@@ -1,0 +1,33 @@
+
+# Loader metadata
+modLoader="javafml"
+loaderVersion="[31,)"
+issueTrackerURL="https://github.com/DoubleDoorDevelopment/CrayCrafting" #optional
+
+[[mods]]
+    modId="craycrafting" #mandatory
+    version="${file.jarVersion}" #mandatory
+    displayName="Cray Crafting" #mandatory
+    #updateJSONURL="http://myurl.me/" #optional
+    displayURL="https://www.curseforge.com/minecraft/mc-mods/craycrafting" #optional
+    #logoFile="icon.png" #optional
+    credits="Original version made and maintained by DoubleDoorDev (Dries007, Claycorp), and updated to 1.15 by AlcatrazEscapee" #optional
+    authors="Dries007, Claycorp, AlcatrazEscapee" #optional
+    description='''
+    Randomizes the output of crafting recipes!
+    '''
+
+# dependencies
+[[dependencies.craycrafting]]
+    modId="forge" #mandatory
+    mandatory=true #mandatory
+    versionRange="[31,)" #mandatory
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.craycrafting]]
+    modId="minecraft" #mandatory
+    mandatory=true #mandatory
+    versionRange="[1.15.2,)" #mandatory
+    ordering="NONE"
+    side="BOTH"
