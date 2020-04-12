@@ -38,9 +38,9 @@ import org.apache.logging.log4j.Logger;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.RecipeManager;
+import net.minecraft.network.play.server.SUpdateRecipesPacket;
 import net.minecraft.resources.IFutureReloadListener;
 import net.minecraft.resources.SimpleReloadableResourceManager;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.dimension.DimensionType;
@@ -54,11 +54,7 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.server.FMLServerAboutToStartEvent;
-import net.minecraftforge.fml.network.NetworkRegistry;
-import net.minecraftforge.fml.network.PacketDistributor;
-import net.minecraftforge.fml.network.simple.SimpleChannel;
 
-import net.doubledoordev.craycrafting.network.RecipeRandomizationPacket;
 import net.doubledoordev.craycrafting.recipe.CrayRecipeManager;
 
 
@@ -72,9 +68,6 @@ public final class CrayCrafting
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private static final String NETWORK_VERSION = Integer.toString(1);
-    private static final SimpleChannel NETWORK = NetworkRegistry.newSimpleChannel(new ResourceLocation(MOD_ID, "network"), () -> NETWORK_VERSION, NETWORK_VERSION::equals, NETWORK_VERSION::equals);
-
     public CrayCrafting()
     {
         LOGGER.info("Oh! Girl, you got me actin' so cray cray. When you tell me you won't be my baby. - Sev'ral Timez");
@@ -85,9 +78,6 @@ public final class CrayCrafting
 
         // Register event handlers
         MinecraftForge.EVENT_BUS.register(this);
-
-        // Message to client to let them know the recipes need to be re-randomized
-        NETWORK.registerMessage(0, RecipeRandomizationPacket.class, RecipeRandomizationPacket::encode, RecipeRandomizationPacket::new, RecipeRandomizationPacket::handle);
     }
 
     /**
@@ -200,9 +190,13 @@ public final class CrayCrafting
             }
             CrayRecipeManager.INSTANCE.setSeed(world.getSeed(), interval);
             CrayRecipeManager.INSTANCE.randomizeAllRecipes();
-            NETWORK.send(PacketDistributor.ALL.noArg(), new RecipeRandomizationPacket(world.getSeed(), interval));
-            world.getPlayers().forEach(player -> {
-                player.sendMessage(new TranslationTextComponent(MOD_ID + ".message.randomized_recipes"));
+            world.getPlayers().forEach(player -> player.sendMessage(new TranslationTextComponent(MOD_ID + ".message.randomized_recipes")));
+
+            // Copied from PlayerList, to sync recipe changes
+            SUpdateRecipesPacket updateRecipePacket = new SUpdateRecipesPacket(CrayRecipeManager.INSTANCE.getRecipes());
+            ((ServerWorld) world).getServer().getPlayerList().getPlayers().forEach(player -> {
+                player.connection.sendPacket(updateRecipePacket);
+                player.getRecipeBook().init(player);
             });
         }
         else
