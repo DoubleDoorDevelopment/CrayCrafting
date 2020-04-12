@@ -1,9 +1,7 @@
-.gradle
-build
-jars
-out
+# Intellij
+/.gradle
+/.idea
+/build
+/run
 *.iml
-*.ipr
-*.iws
-.idea
-*.json
+*.xml

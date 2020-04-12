@@ -30,163 +30,184 @@
 
 package net.doubledoordev.craycrafting;
 
-import com.google.common.base.Strings;
-import cpw.mods.fml.client.config.IConfigElement;
-import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.event.FMLServerStartingEvent;
-import cpw.mods.fml.common.event.FMLServerStoppingEvent;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
-import cpw.mods.fml.common.gameevent.PlayerEvent;
-import cpw.mods.fml.common.network.NetworkRegistry;
-import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
-import cpw.mods.fml.relauncher.Side;
-import net.doubledoordev.craycrafting.network.ConfigSyncMessage;
-import net.doubledoordev.craycrafting.network.RecipeMessage;
-import net.doubledoordev.craycrafting.network.ResetMessage;
-import net.doubledoordev.craycrafting.recipes.*;
-import net.doubledoordev.d3core.util.ID3Mod;
-import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.ChatComponentText;
-import net.minecraftforge.common.DimensionManager;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.ConfigElement;
-import net.minecraftforge.common.config.Configuration;
-import org.apache.logging.log4j.Logger;
-
-import java.io.File;
+import java.util.Collection;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
-import static net.doubledoordev.craycrafting.util.Constants.MODID;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.item.crafting.RecipeManager;
+import net.minecraft.resources.IFutureReloadListener;
+import net.minecraft.resources.SimpleReloadableResourceManager;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.server.FMLServerAboutToStartEvent;
+import net.minecraftforge.fml.network.NetworkRegistry;
+import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraftforge.fml.network.simple.SimpleChannel;
+
+import net.doubledoordev.craycrafting.network.RecipeRandomizationPacket;
+import net.doubledoordev.craycrafting.recipe.CrayRecipeManager;
+
 
 /**
- * @author Dries007
+ * @author Dries007, AlcatrazEscapee
  */
-@Mod(modid = MODID, canBeDeactivated = false)
-public class CrayCrafting implements ID3Mod
+@Mod(CrayCrafting.MOD_ID)
+public final class CrayCrafting
 {
-    @Mod.Instance(MODID)
-    public static CrayCrafting instance;
+    public static final String MOD_ID = "craycrafting";
 
-    public Logger logger;
-    private SimpleNetworkWrapper snw;
-    private File recipeFile;
-    private Configuration configuration;
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    public int     timer = 0;
-    public String  timermessage = "[CrayCrafting] Recipes have been rotated!";
-    public boolean listType = false;
-    public Integer[] list = new Integer[0];
+    private static final String NETWORK_VERSION = Integer.toString(1);
+    private static final SimpleChannel NETWORK = NetworkRegistry.newSimpleChannel(new ResourceLocation(MOD_ID, "network"), () -> NETWORK_VERSION, NETWORK_VERSION::equals, NETWORK_VERSION::equals);
 
-    public static SimpleNetworkWrapper getSnw()
+    public CrayCrafting()
     {
-        return instance.snw;
-    }
+        LOGGER.info("Oh! Girl, you got me actin' so cray cray. When you tell me you won't be my baby. - Sev'ral Timez");
+        LOGGER.debug("Hello debug logging");
 
-    @Mod.EventHandler
-    public void preInit(FMLPreInitializationEvent event)
-    {
-        logger = event.getModLog();
+        // Setup config
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+
+        // Register event handlers
         MinecraftForge.EVENT_BUS.register(this);
-        FMLCommonHandler.instance().bus().register(this);
 
-        configuration = new Configuration(event.getSuggestedConfigurationFile());
-        syncConfig();
-
-        new ShapedRecipesType();
-        new ShapelessRecipesType();
-        new ShapedOreRecipeType();
-        new ShapelessOreRecipeType();
-
-        int id = 0;
-        snw = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
-        snw.registerMessage(RecipeMessage.Handler.class, RecipeMessage.class, id++, Side.CLIENT);
-        snw.registerMessage(ResetMessage.Handler.class, ResetMessage.class, id++, Side.CLIENT);
-        snw.registerMessage(ConfigSyncMessage.Handler.class, ConfigSyncMessage.class, id++, Side.CLIENT);
+        // Message to client to let them know the recipes need to be re-randomized
+        NETWORK.registerMessage(0, RecipeRandomizationPacket.class, RecipeRandomizationPacket::encode, RecipeRandomizationPacket::new, RecipeRandomizationPacket::handle);
     }
 
-    @Mod.EventHandler()
-    public void eventHandler(FMLServerStoppingEvent event)
+    /**
+     * Unlock all recipes for a player when they log in
+     * Same as /recipe give @p *
+     * Copied from {@link net.minecraft.command.impl.RecipeCommand}
+     *
+     * @param event {@link PlayerEvent.PlayerLoggedInEvent}
+     */
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event)
     {
-        if (!MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.undo();
-    }
-
-    @Mod.EventHandler()
-    public void eventHandler(FMLServerStartingEvent event)
-    {
-        RecipeRegistry.setConfigFromServer(listType, list);
-
-        recipeFile = new File(DimensionManager.getCurrentSaveRootDirectory(), MODID + ".dat");
-        if (recipeFile.exists())
+        if (Config.COMMON.unlockAllRecipeBookRecipes.get())
         {
-            try
+            PlayerEntity player = event.getPlayer();
+            if (player.getServer() != null)
             {
-                RecipeRegistry.loadRecipesFromNBT(CompressedStreamTools.read(recipeFile));
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else
-        {
-            RecipeRegistry.randomizeRecipes(recipeFile);
-        }
-
-        if (timer > 0) setupTimer();
-    }
-
-    public void setupTimer()
-    {
-        if (timer >= 1)
-        {
-            new Timer(MODID + "-Timer").schedule(new TimerTask()
-            {
-                @Override
-                public void run()
+                Collection<IRecipe<?>> recipes = player.getServer().getRecipeManager().getRecipes();
+                int unlocked = player.unlockRecipes(recipes);
+                if (unlocked > 0)
                 {
-                    logger.warn("Recipe timer! Resetting all the recipes!");
-                    RecipeRegistry.undo();
-                    RecipeRegistry.randomizeRecipes(recipeFile);
-                    if (MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.sendPacketToAll();
-
-                    if (!Strings.isNullOrEmpty(timermessage)) MinecraftServer.getServer().getConfigurationManager().sendChatMsg(new ChatComponentText(timermessage));
-
-                    setupTimer();
+                    player.sendMessage(new TranslationTextComponent("commands.recipe.give.success.single", unlocked, player.getDisplayName()));
                 }
-            }, 1000 * 60 * timer);
+            }
+        }
+    }
+
+    /**
+     * We first randomize recipe outputs on world load, as that's the earliest we can access the seed
+     * Since we do this out of sync with vanilla's recipe reloading, we need to do our own syncing
+     *
+     * @param event {@link WorldEvent.Load}
+     */
+    @SubscribeEvent
+    public void onWorldLoad(WorldEvent.Load event)
+    {
+        if (!event.getWorld().isRemote() && event.getWorld().getDimension().getType() == DimensionType.OVERWORLD)
+        {
+            LOGGER.debug("World load - initializing cray recipe manager with world seed and reloading recipes.");
+            // Initialize crafting randomizer based on world seed
+            triggerRecipeReload(event.getWorld());
+        }
+    }
+
+    /**
+     * Listen to world (overworld) ticks to know when to sync recipes
+     *
+     * @param event {@link TickEvent.WorldTickEvent}
+     */
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event)
+    {
+        if (!event.world.isRemote && event.world.getDimension().getType() == DimensionType.OVERWORLD)
+        {
+            long interval = Config.COMMON.recipeRandomizationTicks.get();
+            if (event.world.getGameTime() != 0 && interval != 0 && event.world.getGameTime() % interval == 0)
+            {
+                LOGGER.debug("Triggering recipe reload due to random interval elapsed!");
+                triggerRecipeReload(event.world);
+            }
         }
     }
 
     @SubscribeEvent
-    public void loginEvent(PlayerEvent.PlayerLoggedInEvent event)
+    public void onServerAboutToStart(FMLServerAboutToStartEvent event)
     {
-        if (MinecraftServer.getServer().isDedicatedServer()) RecipeRegistry.sendPacketTo(event.player);
+        // This is the dirty hacks that make this mod work
+        // We replace the vanilla RecipeManager, but it's already too late!
+        // We need to also replace it's entry in the resource reload listener
+        LOGGER.debug("Replacing vanilla recipe manager!");
+        if (event.getServer().getResourceManager() instanceof SimpleReloadableResourceManager)
+        {
+            SimpleReloadableResourceManager resourceManager = (SimpleReloadableResourceManager) event.getServer().getResourceManager();
+            RecipeManager recipeManager = event.getServer().getRecipeManager();
+
+            // Replace the server recipe manager
+            event.getServer().recipeManager = CrayRecipeManager.INSTANCE;
+
+            // Replace the entry in the resource manager
+            replaceRecipeManagerInList(resourceManager.reloadListeners, recipeManager);
+            replaceRecipeManagerInList(resourceManager.initTaskQueue, recipeManager);
+        }
+        else
+        {
+            LOGGER.error("Unknown resource manager, unable to replace! This mod will not function!");
+        }
     }
 
-    @Override
-    public void syncConfig()
+    private void replaceRecipeManagerInList(List<IFutureReloadListener> list, IFutureReloadListener oldItem)
     {
-        configuration.setCategoryLanguageKey(MODID, "d3.craycrafting.config.craycrafting");
-        configuration.setCategoryRequiresWorldRestart(MODID, true);
-
-        timer = configuration.get(MODID, "resetTimer", timer, "For extra evil, this timer rotates the crafting every X minutes. 0 for disable.").getInt();
-        timermessage = configuration.get(MODID, "timermessage", timermessage, "Message to be send to all players on timer. Empty = no message").getString();
-
-        listType = configuration.getBoolean("listType", MODID, listType, "True means that the list is a whitelist. Craycrafting only applies in the dimensions in the list.\nFalse means that the list is a blacklist. Craycrafting applies in all dimensions except the ones in the list");
-        int[] templist = configuration.get(MODID, "list", new int[0], "The black/whitelist. See listType.").getIntList();
-        list = new Integer[templist.length];
-        for (int i = 0; i < templist.length; i++) list[i] = templist[i];
-        if (configuration.hasChanged()) configuration.save();
+        int i = list.indexOf(oldItem);
+        if (i != -1)
+        {
+            list.set(i, CrayRecipeManager.INSTANCE);
+        }
+        else
+        {
+            LOGGER.error("Unable to replace recipe manager, many things may be broken!");
+        }
     }
 
-    @Override
-    public void addConfigElements(List<IConfigElement> configElements)
+    private void triggerRecipeReload(IWorld world)
     {
-        configElements.add(new ConfigElement(configuration.getCategory(MODID.toLowerCase())));
+        if (world instanceof ServerWorld)
+        {
+            long interval = 0;
+            if (Config.COMMON.recipeRandomizationTicks.get() != 0)
+            {
+                interval = (1 + ((ServerWorld) world).getGameTime()) / Config.COMMON.recipeRandomizationTicks.get();
+            }
+            CrayRecipeManager.INSTANCE.setSeed(world.getSeed(), interval);
+            CrayRecipeManager.INSTANCE.randomizeAllRecipes();
+            NETWORK.send(PacketDistributor.ALL.noArg(), new RecipeRandomizationPacket(world.getSeed(), interval));
+            world.getPlayers().forEach(player -> {
+                player.sendMessage(new TranslationTextComponent(MOD_ID + ".message.randomized_recipes"));
+            });
+        }
+        else
+        {
+            LOGGER.warn("Not a server world, unable to reload recipes.");
+        }
     }
 }
