@@ -42,7 +42,7 @@ public final class Config
             sendRecipeRandomizationMessage = builder
                 .comment("Should we send the player a chat message when recipes get randomized?")
                 .translation(MOD_ID + ".config.send_recipe_randomization_message")
-                .define("send_recipe_randomization_message", false);
+                .define("send_recipe_randomization_message", true);
 
             recipeRandomizationMessage = builder
                 .comment("Message to send to the player when recipes are randomized. This will only be used if recipe_randomization_translation_key is set to false.")
@@ -52,7 +52,7 @@ public final class Config
             recipeRandomizationTranslationKey = builder
                 .comment("Should the message sent to the player use a translation key? (This works better when both client + server have this mod, but won't work if only the server has this mod)")
                 .translation(MOD_ID + ".config.recipe_randomization_translation_key")
-                .define("recipe_randomization_translation_key", false);
+                .define("recipe_randomization_translation_key", true);
 
             builder.pop();
         }
