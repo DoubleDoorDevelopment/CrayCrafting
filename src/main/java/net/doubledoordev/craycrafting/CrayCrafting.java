@@ -41,6 +41,7 @@ import net.minecraft.item.crafting.RecipeManager;
 import net.minecraft.network.play.server.SUpdateRecipesPacket;
 import net.minecraft.resources.IFutureReloadListener;
 import net.minecraft.resources.SimpleReloadableResourceManager;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.dimension.DimensionType;
@@ -190,7 +191,19 @@ public final class CrayCrafting
             }
             CrayRecipeManager.INSTANCE.setSeed(world.getSeed(), interval);
             CrayRecipeManager.INSTANCE.randomizeAllRecipes();
-            world.getPlayers().forEach(player -> player.sendMessage(new TranslationTextComponent(MOD_ID + ".message.randomized_recipes")));
+            world.getPlayers().forEach(player -> {
+                if (Config.COMMON.sendRecipeRandomizationMessage.get())
+                {
+                    if (Config.COMMON.recipeRandomizationTranslationKey.get())
+                    {
+                        player.sendMessage(new TranslationTextComponent(MOD_ID + ".message.randomized_recipes"));
+                    }
+                    else
+                    {
+                        player.sendMessage(new StringTextComponent(Config.COMMON.recipeRandomizationMessage.get()));
+                    }
+                }
+            });
 
             // Copied from PlayerList, to sync recipe changes
             SUpdateRecipesPacket updateRecipePacket = new SUpdateRecipesPacket(CrayRecipeManager.INSTANCE.getRecipes());
