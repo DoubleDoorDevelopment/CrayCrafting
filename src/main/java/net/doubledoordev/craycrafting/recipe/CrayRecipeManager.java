@@ -20,6 +20,17 @@ public class CrayRecipeManager extends RecipeManager
 {
     public static final CrayRecipeManager INSTANCE = new CrayRecipeManager();
 
+    // The list of recipe classes we know how to randomize
+    public static final Set<Class<? extends IRecipe<?>>> RECIPE_CLASSES = new HashSet<>(Arrays.asList(
+        ShapedRecipe.class,
+        ShapelessRecipe.class,
+        CampfireCookingRecipe.class,
+        FurnaceRecipe.class,
+        BlastingRecipe.class,
+        SmokingRecipe.class,
+        StonecuttingRecipe.class
+    ));
+
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Random RANDOM = new Random();
 
@@ -39,23 +50,41 @@ public class CrayRecipeManager extends RecipeManager
         LOGGER.info("Randomizing recipe outputs!");
         RANDOM.setSeed(FastRandom.mix(seed, interval));
 
-        // Shaped recipes
-        randomize(getRecipes(recipe -> {
-            if (recipe.getType() == IRecipeType.CRAFTING && recipe.getClass() == ShapedRecipe.class)
-            {
-                return (ShapedRecipe) recipe;
+        randomize(getRecipes()
+                .stream()
+                .filter(recipe -> RECIPE_CLASSES.contains(recipe.getClass()))
+                .collect(Collectors.toList()), recipe -> {
+                // Get the output from the recipe
+                if (RECIPE_CLASSES.contains(recipe.getClass()))
+                {
+                    return recipe.getRecipeOutput();
+                }
+                return null;
+            },
+            (recipe, output) -> {
+                // Set the new output on a recipe
+                if (recipe.getClass() == ShapedRecipe.class)
+                {
+                    ((ShapedRecipe) recipe).recipeOutput = output;
+                }
+                else if (recipe.getClass() == ShapelessRecipe.class)
+                {
+                    ((ShapelessRecipe) recipe).recipeOutput = output;
+                }
+                else if (recipe.getClass() == CampfireCookingRecipe.class || recipe.getClass() == FurnaceRecipe.class || recipe.getClass() == SmokingRecipe.class || recipe.getClass() == BlastingRecipe.class)
+                {
+                    ((AbstractCookingRecipe) recipe).result = output;
+                }
+                else if (recipe.getClass() == StonecuttingRecipe.class)
+                {
+                    ((SingleItemRecipe) recipe).result = output;
+                }
+                else
+                {
+                    LOGGER.warn("Unable to set the output on a recipe! This could have weird consequences! Recipe = {}, Class = {}, Output = {}", recipe.getId(), recipe.getClass().getSimpleName(), output);
+                }
             }
-            return null;
-        }), ShapedRecipe::getRecipeOutput, (recipe, output) -> recipe.recipeOutput = output);
-
-        // Shapeless recipes
-        randomize(getRecipes(recipe -> {
-            if (recipe.getType() == IRecipeType.CRAFTING && recipe.getClass() == ShapelessRecipe.class)
-            {
-                return (ShapelessRecipe) recipe;
-            }
-            return null;
-        }), ShapelessRecipe::getRecipeOutput, (recipe, output) -> recipe.recipeOutput = output);
+        );
     }
 
     @Override
@@ -71,23 +100,6 @@ public class CrayRecipeManager extends RecipeManager
     }
 
     /**
-     * Gets the recipes of a particular type
-     *
-     * @param <R>          The recipe type to return
-     * @param recipeMapper A function to map a generic recipe to the recipe type, or null (if it doesn't match)
-     * @return A list of all the recipes matching the given type and filter / mapper
-     */
-    private <R extends IRecipe<?>> List<R> getRecipes(Function<IRecipe<?>, R> recipeMapper)
-    {
-        return getRecipes()
-            .stream()
-            .map(recipeMapper)
-            .filter(Objects::nonNull)
-            .sorted(Comparator.comparing(IRecipe::getId)) // Sort them based on ID initially, so the randomization is always deterministic after
-            .collect(Collectors.toList());
-    }
-
-    /**
      * Randomizes a set of recipes outputs
      *
      * @param recipes      The set of recipes
@@ -98,6 +110,7 @@ public class CrayRecipeManager extends RecipeManager
     private <R extends IRecipe<?>, T> void randomize(List<R> recipes, Function<R, T> outputGetter, BiConsumer<R, T> outputSetter)
     {
         // Shuffled Outputs
+        recipes.sort(Comparator.comparing(IRecipe::getId));
         List<T> randomizedOutputs = recipes
             .stream()
             .map(outputGetter)

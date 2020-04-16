@@ -1,4 +1,8 @@
 {
   "craycrafting.config.unlock_all_recipe_book_recipes": "Unlock all recipe book recipes",
+  "craycrafting.config.recipe_randomization_ticks": "Recipe randomization ticks",
+  "craycrafting.config.send_recipe_randomization_message": "Send recipe randomization message",
+  "craycrafting.config.recipe_randomization_message": "Recipe randomization message",
+  "craycrafting.config.recipe_randomization_translation_key": "Recipe randomization message translation key",
   "craycrafting.message.randomized_recipes": "Recipes have been randomized!"
 }
