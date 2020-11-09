@@ -35,9 +35,9 @@ public final class Config
                 .define("unlock_all_recipe_book_recipes", true);
 
             recipeRandomizationTicks = builder
-                .comment("Number of ticks before recipes are randomized. 24000 = 1 in game day. Set to 0 to disable.")
-                .translation(MOD_ID + ".config.recipe_randomization_ticks")
-                .defineInRange("recipe_randomization_ticks", 24000, 1000, Integer.MAX_VALUE);
+                    .comment("Number of ticks before recipes are randomized. 24000 = 1 in game day. Set to 0 to disable.")
+                    .translation(MOD_ID + ".config.recipe_randomization_ticks")
+                    .defineInRange("recipe_randomization_ticks", 24000, 0, Integer.MAX_VALUE);
 
             sendRecipeRandomizationMessage = builder
                 .comment("Should we send the player a chat message when recipes get randomized?")
